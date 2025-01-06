@@ -1,0 +1,80 @@
+# VSCode settings
+.vscode/
+*.code-workspace
+
+# Logs
+logs/
+*.log
+
+# Extensions and debugging artifacts
+.vscode-test/
+*.vsix
+launch.json
+
+# Workspace storage and backups
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+
+# Target directory (generated files)
+target/
+
+# Build artifacts and intermediates
+**/*.rs.bk
+
+# Dependencies
+Cargo.lock
+/.cargo
+
+# IDE and editor-specific files
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Rust documentation artifacts
+doc/
+
+# Test output and coverage
+tests/output/
+/coverage/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.old
+
+# Binary files (if any executables are built locally)
+*.exe
+*.out
+*.o
+*.so
+*.dll
+*.dylib
+
+# Debugging and profiling tools
+*.profraw
+*.gcda
+*.gcno
+
+# Cargo-specific files
+.cargo/
+.cargo-lock
+
+# Rust Analyzer files
+rust-analyzer.json
