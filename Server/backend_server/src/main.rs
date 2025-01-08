@@ -1,33 +1,55 @@
+
+use tokio::net::TcpListener;
+use tokio::net::TcpStream;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+
+
+use tokio::task;
+use tokio::io::{AsyncBufReadExt};
+
 use core::usize;
-use std::{
-    io::{prelude::*, BufReader, Read, Write},
-    net::{TcpListener, TcpStream},
-};
+use std::error::Error;
 
-use backend_server::ThreadPool;
+// local modules
+mod json_parser;
+mod influxdb_handler;
+
+use json_parser::parse_sensor_data;
+use influxdb_handler::DbWriter;
 
 
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let pool = ThreadPool::new(4);
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Bind the listener to a local address
+    let listener = TcpListener::bind("127.0.0.1:7878").await?;
+    println!("Listening on 127.0.0.1:7878");
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
+    // Accept incoming connections
+    loop {
+        // Accept a new connection
+        let (stream, _) = listener.accept().await?;
+        println!("New connection received");
 
-        pool.execute(|| {
-            handle_connection(stream);
+        // Spawn a new asynchronous task to handle the connection
+        task::spawn(async move {
+            if let Err(e) = handle_connection(stream).await {
+                eprintln!("Failed to handle connection: {:?}", e);
+            }
         });
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let mut buf_reader = BufReader::new(&stream);
+
+async fn handle_connection(stream: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
+
+    let mut buf_reader = tokio::io::BufReader::new(stream);
     let mut headers = String::new();
 
     let mut content_length = 0;
     loop {
         let mut line = String::new();
-        buf_reader.read_line(&mut line).unwrap();
+        let _ = buf_reader.read_line(&mut line).await?;
         
         if line == "\r\n" {
             break;
@@ -39,15 +61,32 @@ fn handle_connection(mut stream: TcpStream) {
         headers.push_str(&line);
     }
 
-    println!("Headers: {headers}");
+    println!("Headers: {headers} - {}", content_length);
 
     let mut body = vec![0; content_length];
-    buf_reader.read_exact(&mut body).unwrap();
+    buf_reader.read_exact(&mut body).await?;
     let body_str = String::from_utf8(body).unwrap();
 
     println!("Body: {body_str}");
 
     let response = "HTTP/1.1 200 OK\r\n\r\n";
+    buf_reader.get_mut().write_all(response.as_bytes()).await?;
 
-    stream.write_all(response.as_bytes()).unwrap();
+    // parse json values
+    let (temp, pres, hum) = parse_sensor_data(&body_str).unwrap();
+
+    // write to influx database
+    write_db_values(temp, pres, hum).await?;
+
+    Ok(())
+}
+
+async fn write_db_values(temperature: f64, pressure: f64, humidity: f64) -> Result<(), Box<dyn Error>> {
+    let db_writer = DbWriter::new("http://localhost:8086", "example_database");
+
+    db_writer.write_temperature(temperature).await?;
+    db_writer.write_pressure(pressure).await?;
+    db_writer.write_humidity(humidity).await?;
+
+    Ok(())
 }
