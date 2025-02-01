@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  rust-app:
+    build:
+      context: .
+      dockerfile: docker_launch/rust_dockerfile
+    container_name: rust-app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - influxdb
+    environment:
+      # Add environment variables for Rust app if needed
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: your-influxdb-token
+      INFLUXDB_ORG: your-organization
+      INFLUXDB_BUCKET: your-bucket
+
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
+    restart: always
+    environment:
+      - INFLUXDB_DB=sensor_database
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=password
+    ports:
+      - '8086:8086'  # Expose InfluxDB on port 8086
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: always
+    depends_on:
+      - influxdb
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    links:
+      - influxdb
+    ports:
+      - '3000:3000'  # Expose Grafana on port 3000

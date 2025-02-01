@@ -4,6 +4,8 @@ use tokio::net::TcpStream;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 
+use tokio::time::sleep;
+use tokio::time::Duration;
 
 use tokio::task;
 use tokio::io::{AsyncBufReadExt};
@@ -22,14 +24,12 @@ use influxdb_handler::DbWriter;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bind the listener to a local address
-    let listener = TcpListener::bind("127.0.0.1:7878").await?;
-    println!("Listening on 127.0.0.1:7878");
+    let listener = TcpListener::bind("0.0.0.0:5000").await?;
 
     // Accept incoming connections
     loop {
         // Accept a new connection
         let (stream, _) = listener.accept().await?;
-        println!("New connection received");
 
         // Spawn a new asynchronous task to handle the connection
         task::spawn(async move {
@@ -61,13 +61,9 @@ async fn handle_connection(stream: TcpStream) -> Result<(), Box<dyn std::error::
         headers.push_str(&line);
     }
 
-    println!("Headers: {headers} - {}", content_length);
-
     let mut body = vec![0; content_length];
     buf_reader.read_exact(&mut body).await?;
     let body_str = String::from_utf8(body).unwrap();
-
-    println!("Body: {body_str}");
 
     let response = "HTTP/1.1 200 OK\r\n\r\n";
     buf_reader.get_mut().write_all(response.as_bytes()).await?;
@@ -82,7 +78,7 @@ async fn handle_connection(stream: TcpStream) -> Result<(), Box<dyn std::error::
 }
 
 async fn write_db_values(temperature: f64, pressure: f64, humidity: f64) -> Result<(), Box<dyn Error>> {
-    let db_writer = DbWriter::new("http://localhost:8086", "example_database");
+    let db_writer = DbWriter::new("http://user:password@influxdb:8086", "sensor_database");
 
     db_writer.write_temperature(temperature).await?;
     db_writer.write_pressure(pressure).await?;

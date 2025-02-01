@@ -1,0 +1,5 @@
+# Dockerfile for InfluxDB
+FROM influxdb:2.7
+
+# Expose the default InfluxDB port
+EXPOSE 8086

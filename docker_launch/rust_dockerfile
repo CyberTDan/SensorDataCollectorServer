@@ -1,0 +1,28 @@
+# Dockerfile for Rust Application
+# Stage 1: Build the application
+FROM rust:1.72 as builder
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the application source code into the container
+COPY Server/backend_server/src ./src
+COPY Server/backend_server/Cargo.toml .
+
+# Build the application in release mode
+RUN cargo build --release
+
+# Stage 2: Create a minimal runtime image
+FROM debian:bookworm-slim AS runtime
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the built application from the builder stage
+COPY --from=builder /app/target/release/backend_server /app/backend_server
+
+# Expose the port the application will listen on
+EXPOSE 5000
+
+# Run the application
+CMD ["./backend_server"]
