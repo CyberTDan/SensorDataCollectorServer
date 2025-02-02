@@ -1,5 +1,8 @@
 version: "3.9"
 
+networks:
+  monitoring:
+
 services:
   rust-app:
     image: trihlebdv/rust_sensor_backend
@@ -14,6 +17,8 @@ services:
       INFLUXDB_TOKEN: your-influxdb-token
       INFLUXDB_ORG: your-organization
       INFLUXDB_BUCKET: your-bucket
+    networks:
+      - monitoring
 
   influxdb:
     image: influxdb:1.8-alpine
@@ -25,6 +30,8 @@ services:
       - INFLUXDB_ADMIN_PASSWORD=password
     ports:
       - '8086:8086'  # Expose InfluxDB on port 8086
+    networks:
+      - monitoring
 
   grafana:
     image: grafana/grafana-enterprise
@@ -39,3 +46,5 @@ services:
       - influxdb
     ports:
       - '3000:3000'  # Expose Grafana on port 3000
+    networks:
+      - monitoring
